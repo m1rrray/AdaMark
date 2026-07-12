@@ -1,0 +1,27 @@
+# ---- Конфигурация для обучения модели ----
+
+# базовые гиперпараметры
+learning_rate: 0.00035
+batch_size: 64
+epochs: 150
+seed: 42
+num_workers: 12 
+
+# при продолжении обучения позволяет поменять lr
+warm_start: False
+
+# пути к данным
+train_cover_dir: "../datasets/ffhq/images256x256"
+save_dir: "./checkpoints_models_rf" 
+
+# параметры ранней остановки
+patience: 15
+
+# веса для функции потерь
+hiding_loss_weight: 1
+revealing_loss_weight: 3
+lambda_fft: 3
+
+# продолжение обучения с последней сохраненной модели
+resume: False
+resume_path: './checkpoints_models_rf/last.pth'

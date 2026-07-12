@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adamark"
+version = "0.1.0"
+description = "Framework for training and evaluating an adaptive image watermarking model with a tunable robustness/imperceptibility trade-off (rf)."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "torch",
+    "torchvision",
+    "kornia",
+    "piq",
+    "torchmetrics",
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "pyyaml",
+    "tqdm",
+    "openpyxl",
+    "Pillow",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
