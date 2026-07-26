@@ -24,7 +24,7 @@ src/adamark/
 ├── evaluation/    # evaluation, attack suite, spectral analysis, reporting
 └── utils/         # seeding, DDP averaging, payload generation
 configs/            # train_config.yaml, eval_config.yaml
-tools/              # developer utilities, e.g. numerical equivalence checking
+tools/              # developer utilities: equivalence checking, training diagnostics
 train.py            # CLI entry point for training
 evaluate.py         # CLI entry point for evaluation
 analyze_spectrum.py # CLI entry point for the frequency analysis
@@ -86,6 +86,37 @@ Flip a flag, point `save_dir` at a fresh directory, and retrain. When evaluating
 ablated checkpoint, set the matching `use_film` / `use_budget` in
 `configs/eval_config.yaml` — otherwise the embedding path will not match the one
 the weights were trained for.
+
+## Reproducibility
+
+Checkpoints record the ablation switches they were trained under. Loading validates
+them against the current config and refuses weights whose embedding path differs,
+so an ablated model cannot be silently evaluated as the full one. Weight files
+written before this metadata existed still load, with a warning that the check was
+skipped.
+
+The dependency list below is unpinned. The exact versions behind the published
+results are in `requirements-lock.txt`; regenerate it from the environment you
+trained in:
+
+```bash
+pip freeze > requirements-lock.txt
+```
+
+`kornia.enhance.jpeg_codec_differentiable` drives the training-time JPEG simulation
+and is the dependency most likely to shift behaviour between releases, so pin it
+before publishing results.
+
+## Diagnostics
+
+```bash
+python tools/diagnose_training.py
+```
+
+Reports, for one forward pass: the dtypes AMP assigns inside the spectral loss, the
+magnitude of each loss term next to its configured weight, and the raw amplitude of
+the embedding network's output. Useful when the objective looks unbalanced or the
+spectral penalty appears to have no effect.
 
 ## Comparison with other methods
 

@@ -14,6 +14,7 @@ import yaml
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from adamark.checkpoint import ablation_from_config, load_model_state
 from adamark.data.dataset import create_tamper_dataset
 from adamark.data.transforms import get_adaptive_transforms
 from adamark.evaluation.spectral import (
@@ -33,15 +34,16 @@ RF_VALUES = [0.0, 0.25, 0.5, 0.75, 1.0]
 def load_hiding_net(config, device):
     """Load the embedding network from either the last or the best checkpoint"""
 
-    hiding_net = HidingNet(use_film=bool(config.get("use_film", True))).to(device)
+    ablation = ablation_from_config(config)
+    hiding_net = HidingNet(use_film=ablation["use_film"]).to(device)
 
     if config.get("last", False):
-        ckpt = torch.load(config["last_path"], map_location=device)
-        hiding_net.load_state_dict(ckpt["hiding_net"], strict=True)
+        state = load_model_state(config["last_path"], device, ablation,
+                                 weights_key="hiding_net")
     else:
-        hiding_net.load_state_dict(
-            torch.load(config["hiding_net_path"], map_location=device))
+        state = load_model_state(config["hiding_net_path"], device, ablation)
 
+    hiding_net.load_state_dict(state, strict=True)
     hiding_net.eval()
     return hiding_net
 

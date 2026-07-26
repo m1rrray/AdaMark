@@ -23,6 +23,9 @@ dependencies = [
     "Pillow",
 ]
 
+[project.optional-dependencies]
+dev = ["ruff"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

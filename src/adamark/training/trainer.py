@@ -14,11 +14,11 @@ from torch.utils.data.distributed import DistributedSampler
 
 from adamark.attacks.attack_module import AttackModule
 from adamark.attacks.distortion import distortion_deterministic_oneof
+from adamark.checkpoint import ablation_from_config, save_checkpoint, save_model, validate_ablation
 from adamark.data.dataset import ImageDataset
 from adamark.data.transforms import get_adaptive_transforms
 from adamark.losses import FFTLoss, HidingLoss, RevealingLoss, enforce_watermark_budget
 from adamark.models import HidingNet, RevealingNet
-from adamark.training.checkpoint import save_checkpoint
 from adamark.utils import ddp_mean, generate_qr_payloads, set_seed
 
 logger = logging.getLogger(__name__)
@@ -47,9 +47,10 @@ def train(config):
         logger.info("DDP started: world_size=%d, visible_gpus=%d",
                     world_size, torch.cuda.device_count())
 
-    use_film = bool(config.get("use_film", True))
-    use_fft_loss = bool(config.get("use_fft_loss", True))
-    use_budget = bool(config.get("use_budget", True))
+    ablation = ablation_from_config(config)
+    use_film = ablation["use_film"]
+    use_fft_loss = ablation["use_fft_loss"]
+    use_budget = ablation["use_budget"]
 
     hiding_net = HidingNet(film_scale=1.0, use_film=use_film).to(device)
     revealing_net = RevealingNet().to(device)
@@ -135,6 +136,7 @@ def train(config):
     if resume and resume_path is not None and os.path.isfile(resume_path):
         map_location = {"cuda:0": f"cuda:{local_rank}"}
         ckpt = torch.load(resume_path, map_location=map_location)
+        validate_ablation(ckpt.get("ablation"), ablation, resume_path)
 
         hiding_net.module.load_state_dict(ckpt["hiding_net"], strict=True)
         revealing_net.module.load_state_dict(ckpt["revealing_net"], strict=True)
@@ -413,8 +415,10 @@ def train(config):
                 epochs_no_improve = 0
                 best_epoch = epoch + 1
 
-                torch.save(hiding_net.module.state_dict(), os.path.join(save_dir, "hiding_net_best.pth"))
-                torch.save(revealing_net.module.state_dict(), os.path.join(save_dir, "revealing_net_best.pth"))
+                save_model(os.path.join(save_dir, "hiding_net_best.pth"),
+                           hiding_net.module.state_dict(), ablation, epoch=epoch)
+                save_model(os.path.join(save_dir, "revealing_net_best.pth"),
+                           revealing_net.module.state_dict(), ablation, epoch=epoch)
                 logger.info("  -> New best result, models saved")
             else:
                 epochs_no_improve += 1
@@ -436,6 +440,7 @@ def train(config):
                 clean_ref=clean_ref,
                 jpeg_ref=jpeg_ref,
                 blur_ref=blur_ref,
+                ablation=ablation,
             )
 
             if epochs_no_improve >= patience:

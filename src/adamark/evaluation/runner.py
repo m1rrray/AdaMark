@@ -5,6 +5,7 @@ import os
 import torch
 from torch.utils.data import DataLoader
 
+from adamark.checkpoint import ablation_from_config, load_model_state
 from adamark.data.dataset import create_tamper_dataset
 from adamark.data.transforms import get_adaptive_transforms
 from adamark.evaluation.attack_suite import build_eval_attacks
@@ -16,16 +17,23 @@ RF_VALUES = [0.0, 0.25, 0.5, 0.75, 1.0]
 
 
 def _load_models(config, device):
-    hiding_net = HidingNet(use_film=bool(config.get("use_film", True))).to(device)
+    ablation = ablation_from_config(config)
+
+    hiding_net = HidingNet(use_film=ablation["use_film"]).to(device)
     revealing_net = RevealingNet().to(device)
 
     if config.get("last", False):
-        ckpt = torch.load(config["last_path"], map_location=device)
-        hiding_net.load_state_dict(ckpt["hiding_net"], strict=True)
-        revealing_net.load_state_dict(ckpt["revealing_net"], strict=True)
+        hiding_net.load_state_dict(
+            load_model_state(config["last_path"], device, ablation, weights_key="hiding_net"),
+            strict=True)
+        revealing_net.load_state_dict(
+            load_model_state(config["last_path"], device, ablation, weights_key="revealing_net"),
+            strict=True)
     else:
-        hiding_net.load_state_dict(torch.load(config["hiding_net_path"], map_location=device))
-        revealing_net.load_state_dict(torch.load(config["revealing_net_path"], map_location=device))
+        hiding_net.load_state_dict(
+            load_model_state(config["hiding_net_path"], device, ablation), strict=True)
+        revealing_net.load_state_dict(
+            load_model_state(config["revealing_net_path"], device, ablation), strict=True)
 
     return hiding_net, revealing_net
 
