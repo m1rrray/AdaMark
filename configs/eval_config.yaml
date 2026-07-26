@@ -13,6 +13,13 @@ test_datasets:
 # evaluate on a subset of the dataset; leave empty to use all images
 limit:
 
+# restrict to one manipulation type: splicing, copymove, or empty for both
+tamper_filter:
+
+# must match the flags the checkpoint was trained with; see configs/train_config.yaml
+use_film: True
+use_budget: True
+
 # print detailed progress during evaluation
 verbose: True
 

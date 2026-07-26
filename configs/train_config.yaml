@@ -29,6 +29,11 @@ patience: 15
 revealing_loss_weight: 3
 lambda_fft: 3
 
+# ablation switches for Section 5; all True reproduces the full AdaMark model
+use_film: True
+use_fft_loss: True
+use_budget: True
+
 # resume training from the last saved checkpoint
 resume: False
 resume_path: './checkpoints_models_rf/last.pth'

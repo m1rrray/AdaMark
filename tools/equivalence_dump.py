@@ -8,11 +8,16 @@ via ``--src``, so the same script runs against both revisions.
 Signatures differ between revisions because the refactor drops unused parameters,
 so arguments are bound through ``inspect.signature`` rather than positionally.
 
+Because the dump uses each revision's default arguments, comparing a revision that
+added opt-in switches against one that did not also proves those switches are inert
+when left at their defaults.
+
 Usage:
     git worktree add /tmp/adamark-base <baseline-commit>
     python tools/equivalence_dump.py --src /tmp/adamark-base/src --out /tmp/before.pt
     python tools/equivalence_dump.py --src ./src --out /tmp/after.pt
     python tools/equivalence_dump.py --compare /tmp/before.pt /tmp/after.pt
+    python tools/equivalence_dump.py --src ./src --check-ablation
 
 Note: ``ImageDataset`` is deliberately excluded. The refactor removes its
 ``random.seed(42)`` side effect on the global RNG, which is a known and intended
@@ -156,6 +161,72 @@ def build_dump(src_path):
     return out
 
 
+def check_ablation(src_path):
+    """Verify the ablation switches behave as the paper's Section 5 requires"""
+
+    src_path = os.path.abspath(src_path)
+    sys.path.insert(0, src_path)
+    for mod in [m for m in sys.modules if m == "adamark" or m.startswith("adamark.")]:
+        del sys.modules[mod]
+
+    import torch
+
+    from adamark.models import HidingNet
+    from adamark.models.modulation import FiLM
+
+    failures = []
+
+    # 1. Disabling FiLM must not change the checkpoint layout.
+    seed_all(torch)
+    full = HidingNet(use_film=True).state_dict()
+    seed_all(torch)
+    ablated = HidingNet(use_film=False).state_dict()
+
+    if sorted(full) != sorted(ablated):
+        failures.append("state_dict keys differ between use_film=True and use_film=False")
+    else:
+        bad = [k for k in full if full[k].shape != ablated[k].shape]
+        if bad:
+            failures.append(f"state_dict shapes differ for {bad[:5]}")
+        print(f"  state_dict layout identical across use_film: {len(full)} tensors")
+
+    # 2. A disabled FiLM layer must be an exact identity.
+    seed_all(torch)
+    film = FiLM(8, enabled=False)
+    with torch.no_grad():
+        # Break the zero-init so a genuine identity is distinguishable from luck.
+        torch.nn.init.normal_(film.mlp[-1].weight, std=0.5)
+        torch.nn.init.normal_(film.mlp[-1].bias, std=0.5)
+        x = torch.randn(2, 8, 5, 5)
+        y = film(x, torch.tensor([[0.3], [0.9]]))
+    if not torch.equal(x, y):
+        failures.append("FiLM(enabled=False) is not an exact identity")
+    else:
+        print("  FiLM(enabled=False) is an exact identity")
+
+    # 3. An enabled FiLM layer must actually modulate.
+    seed_all(torch)
+    film_on = FiLM(8, enabled=True)
+    with torch.no_grad():
+        torch.nn.init.normal_(film_on.mlp[-1].weight, std=0.5)
+        torch.nn.init.normal_(film_on.mlp[-1].bias, std=0.5)
+        y_on = film_on(x, torch.tensor([[0.3], [0.9]]))
+    if torch.equal(x, y_on):
+        failures.append("FiLM(enabled=True) did not modulate its input")
+    else:
+        print("  FiLM(enabled=True) modulates its input")
+
+    sys.path.remove(src_path)
+
+    if failures:
+        print(f"\nFAIL: {len(failures)} problem(s)")
+        for f in failures:
+            print("  -", f)
+        return 1
+    print("\nABLATION SWITCHES OK")
+    return 0
+
+
 def compare(path_a, path_b):
     import torch
 
@@ -196,10 +267,17 @@ def main():
     ap.add_argument("--src", help="Path to the src/ directory of the revision under test")
     ap.add_argument("--out", help="Where to write the dump")
     ap.add_argument("--compare", nargs=2, metavar=("A", "B"), help="Compare two dumps")
+    ap.add_argument("--check-ablation", action="store_true",
+                    help="Self-check the ablation switches in --src")
     args = ap.parse_args()
 
     if args.compare:
         sys.exit(compare(*args.compare))
+
+    if args.check_ablation:
+        if not args.src:
+            ap.error("--check-ablation requires --src")
+        sys.exit(check_ablation(args.src))
 
     if not args.src or not args.out:
         ap.error("--src and --out are both required unless --compare is used")

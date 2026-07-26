@@ -138,7 +138,7 @@ class Tampering(nn.Module):
 
 
 class BlockTampering(nn.Module):
-    """Evaluation-time tampering with rectangular blocks, without IrregularMask"""
+    """Evaluation-time tampering that pastes rectangular blocks from other batch items"""
 
     def __init__(self, max_tamper_blocks=2, min_tamper_size=32, max_tamper_size=80):
         super().__init__()

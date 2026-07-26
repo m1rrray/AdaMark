@@ -47,7 +47,11 @@ def train(config):
         logger.info("DDP started: world_size=%d, visible_gpus=%d",
                     world_size, torch.cuda.device_count())
 
-    hiding_net = HidingNet(film_scale=1.0).to(device)
+    use_film = bool(config.get("use_film", True))
+    use_fft_loss = bool(config.get("use_fft_loss", True))
+    use_budget = bool(config.get("use_budget", True))
+
+    hiding_net = HidingNet(film_scale=1.0, use_film=use_film).to(device)
     revealing_net = RevealingNet().to(device)
     attack_module = AttackModule().to(device)
 
@@ -118,6 +122,10 @@ def train(config):
 
     lambda_r = config.get("revealing_loss_weight", 1.0)
     lambda_fft = config.get("lambda_fft", 0.5)
+
+    if rank == 0 and not (use_film and use_fft_loss and use_budget):
+        logger.info("[ABLATION] use_film=%s use_fft_loss=%s use_budget=%s",
+                    use_film, use_fft_loss, use_budget)
 
     resume = bool(config.get("resume", False))
     resume_path = config.get("resume_path", None)
@@ -215,7 +223,8 @@ def train(config):
 
             with torch.cuda.amp.autocast():
                 watermark = hiding_net(secret_images, rf_tensor)
-                watermark = enforce_watermark_budget(watermark, rf_tensor)
+                if use_budget:
+                    watermark = enforce_watermark_budget(watermark, rf_tensor)
 
                 container = (cover_images + watermark).clamp(0.0, 1.0)
                 effective_watermark = container - cover_images
@@ -227,7 +236,8 @@ def train(config):
                 loss_h_batch = hiding_criterion(container, cover_images, ssim_func=ssim)
                 loss_r_batch = revealing_criterion(
                     retrieved_secret, secret_images, mask, lambda_r_base=lambda_r)
-                loss_fft = fft_loss_fn(effective_watermark, rf_tensor)
+                loss_fft = (fft_loss_fn(effective_watermark, rf_tensor) if use_fft_loss
+                            else effective_watermark.new_zeros(()))
 
             total_loss_val = loss_h_batch + loss_r_batch + lambda_fft * loss_fft
 
@@ -279,13 +289,15 @@ def train(config):
                 with torch.cuda.amp.autocast():
                     rf_val = torch.ones((B, 1), device=device)
                     watermark = hiding_net(secret_img, rf_val)
-                    watermark = enforce_watermark_budget(watermark, rf_val)
+                    if use_budget:
+                        watermark = enforce_watermark_budget(watermark, rf_val)
 
                     container = (cover_img + watermark).clamp(0.0, 1.0)
                     effective_watermark = container - cover_img
 
                     loss_h = hiding_criterion(container, cover_img, ssim_func=ssim)
-                    loss_fft = fft_loss_fn(effective_watermark, rf_val)
+                    loss_fft = (fft_loss_fn(effective_watermark, rf_val) if use_fft_loss
+                                else effective_watermark.new_zeros(()))
 
                     tamp_container, mask = val_tamper(container, cover_img)
 

@@ -12,9 +12,9 @@ import torchvision.io as tv_io
 class Distortion(nn.Module):
     """rf-scaled stochastic JPEG or blur distortion applied during training
 
-    Severity is drawn proportionally to rf, so high-rf samples are trained against
-    stronger degradations. JPEG uses the straight-through trick: the forward pass uses
-    a real non-differentiable codec, gradients flow through the differentiable approx.
+    Severity grows with rf, so high-rf samples see stronger degradation. JPEG is
+    straight-through: a real codec in the forward pass, a differentiable
+    approximation in the backward pass.
     """
 
     def __init__(self, jpeg_quality=15.0, max_blur_sigma=1.75):

@@ -20,7 +20,8 @@ def calculate_psnr(img1, img2):
 
 
 def evaluate_model_single_pass(hiding_net, revealing_net, loader, device, attacks_dict,
-                               rf_value, verbose=True, tamper_threshold=0.5):
+                               rf_value, verbose=True, tamper_threshold=0.5,
+                               use_budget=True):
     """Evaluate the adaptive model at a fixed rf across the attack suite
 
     For each attack the function measures retrieval quality, as PSNR and SSIM of the
@@ -67,7 +68,8 @@ def evaluate_model_single_pass(hiding_net, revealing_net, loader, device, attack
                 secret_img = generate_qr_payloads(B, H, W, block_size=8, device=device)
                 rf_tensor = torch.full((B, 1), rf_value, device=device)
                 watermark = hiding_net(secret_img, rf_tensor)
-                watermark = enforce_watermark_budget(watermark, rf_tensor)
+                if use_budget:
+                    watermark = enforce_watermark_budget(watermark, rf_tensor)
 
                 container_img = (cover_img + watermark).clamp(0, 1)
 

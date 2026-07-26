@@ -46,11 +46,7 @@ def create_tamper_dataset(dataset_name, base_dir, transform, limit=None, tamper_
 
 
 class ImageDataset(Dataset):
-    """FFHQ cover-image dataset, yields a cover tensor and None
-
-    ``transform`` is required: it must resize to the model resolution and convert
-    to a [0, 1] tensor.
-    """
+    """Flat directory of cover images such as FFHQ, yields a cover tensor and None"""
 
     def __init__(self, cover_dir, transform):
         self.cover_dir = cover_dir
@@ -69,7 +65,7 @@ class ImageDataset(Dataset):
 
 
 class Casia2Dataset(Dataset):
-    """CASIA2 tamper-localization dataset"""
+    """CASIA2 dataset, yields an authentic image, a forged image and a GT mask"""
 
     def __init__(self, au_dir, tp_dir, gt_dir, transform, limit=None, tamper_filter=None):
         self.gt_dir = gt_dir
@@ -137,7 +133,7 @@ class Casia2Dataset(Dataset):
 
 
 class Casia1Dataset(Dataset):
-    """CASIA1 tamper-localization dataset"""
+    """CASIA1 dataset, yields an authentic image, a forged image and a GT mask"""
 
     def __init__(self, au_dir, modified_tp_dir, gt_dir, transform, limit=None, tamper_filter=None):
         self.transform = transform
@@ -204,7 +200,7 @@ class Casia1Dataset(Dataset):
 
 
 class ColumbiaDataset(Dataset):
-    """Columbia splicing dataset"""
+    """Columbia splicing dataset, yields an authentic image, a spliced image and a mask"""
 
     def __init__(self, auth_dir, splice_dir, gt_dir, transform, limit=None):
         self.transform = transform

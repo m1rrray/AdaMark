@@ -7,6 +7,8 @@ import torch.nn as nn
 
 
 class ResidualBlock(nn.Module):
+    """Two dilated convolutions with instance norm and a residual connection"""
+
     def __init__(self, channels, dilation):
         super().__init__()
         self.conv1 = nn.Conv2d(channels, channels, kernel_size=3,
@@ -24,6 +26,12 @@ class ResidualBlock(nn.Module):
 
 
 class RevealingNet(nn.Module):
+    """Recovers the secret payload from a possibly attacked container
+
+    Dilated residual blocks widen the receptive field at constant spatial
+    resolution, so the output supports pixel-wise tamper decisions.
+    """
+
     def __init__(self, in_channels=3, out_channels=3):
         super().__init__()
 

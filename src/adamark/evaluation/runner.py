@@ -16,7 +16,7 @@ RF_VALUES = [0.0, 0.25, 0.5, 0.75, 1.0]
 
 
 def _load_models(config, device):
-    hiding_net = HidingNet().to(device)
+    hiding_net = HidingNet(use_film=bool(config.get("use_film", True))).to(device)
     revealing_net = RevealingNet().to(device)
 
     if config.get("last", False):
@@ -37,6 +37,7 @@ def run_evaluation(config):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     hiding_net, revealing_net = _load_models(config, device)
+    use_budget = bool(config.get("use_budget", True))
 
     adaptive_transform = get_adaptive_transforms(256)
     datasets_to_test = config.get("test_datasets") or {}
@@ -53,7 +54,7 @@ def run_evaluation(config):
             base_dir=base_dir,
             transform=adaptive_transform,
             limit=config.get("limit", None),
-            tamper_filter=None,  # e.g. "splicing" / "copymove"
+            tamper_filter=config.get("tamper_filter"),
         )
 
         loader = DataLoader(
@@ -73,7 +74,8 @@ def run_evaluation(config):
             print(f"--- Evaluating adaptive model | RF={rf} ---")
             res = evaluate_model_single_pass(
                 hiding_net, revealing_net, loader, device, attacks_dict,
-                rf_value=rf, verbose=verbose, tamper_threshold=0.5)
+                rf_value=rf, verbose=verbose, tamper_threshold=0.5,
+                use_budget=use_budget)
             res["rf"] = rf
             results_rf.append(res)
 

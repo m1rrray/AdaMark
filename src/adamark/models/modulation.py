@@ -10,7 +10,7 @@ import torch.nn as nn
 
 
 class SinusoidalEmbedding(nn.Module):
-    """Maps a scalar rf in [0, 1] to a sinusoidal feature vector"""
+    """Sinusoidal encoding of the scalar rf into a vector of length 2 * num_freqs"""
 
     def __init__(self, num_freqs: int = 8):
         super().__init__()
@@ -23,12 +23,17 @@ class SinusoidalEmbedding(nn.Module):
 
 
 class FiLM(nn.Module):
-    """Feature-wise linear modulation conditioned on rf"""
+    """Per-channel affine modulation whose scale and shift are predicted from rf
+
+    Setting ``enabled=False`` turns the layer into an identity while keeping its
+    parameters, so ablated and full models share one checkpoint layout.
+    """
 
     def __init__(self, num_channels: int, hidden: int = 128,
-                 scale: float = 1.0, num_freqs: int = 8):
+                 scale: float = 1.0, num_freqs: int = 8, enabled: bool = True):
         super().__init__()
         self.scale = float(scale)
+        self.enabled = bool(enabled)
         self.embed = SinusoidalEmbedding(num_freqs=num_freqs)
 
         self.mlp = nn.Sequential(
@@ -42,6 +47,9 @@ class FiLM(nn.Module):
         nn.init.zeros_(self.mlp[-1].weight)
 
     def forward(self, x, rf):
+        if not self.enabled:
+            return x
+
         rf_embedded = self.embed(rf)
 
         style = self.mlp(rf_embedded) * self.scale
@@ -57,11 +65,11 @@ class FiLM(nn.Module):
 class ConvDownBlock(nn.Module):
     """Encoder block: strided conv, InstanceNorm, rf-conditioned FiLM and LeakyReLU"""
 
-    def __init__(self, in_c, out_c, film_scale=1.0):
+    def __init__(self, in_c, out_c, film_scale=1.0, use_film=True):
         super().__init__()
         self.conv = nn.Conv2d(in_c, out_c, kernel_size=4, stride=2, padding=1)
         self.norm = nn.InstanceNorm2d(out_c, affine=False)
-        self.film = FiLM(out_c, hidden=128, scale=film_scale)
+        self.film = FiLM(out_c, hidden=128, scale=film_scale, enabled=use_film)
         self.act = nn.LeakyReLU(0.1, inplace=False)
 
     def forward(self, x, rf):
@@ -75,11 +83,11 @@ class ConvDownBlock(nn.Module):
 class ConvUpBlock(nn.Module):
     """Decoder block: transposed conv, InstanceNorm, rf-conditioned FiLM and ReLU"""
 
-    def __init__(self, in_c, out_c, film_scale=1.0):
+    def __init__(self, in_c, out_c, film_scale=1.0, use_film=True):
         super().__init__()
         self.conv = nn.ConvTranspose2d(in_c, out_c, kernel_size=4, stride=2, padding=1)
         self.norm = nn.InstanceNorm2d(out_c, affine=False)
-        self.film = FiLM(out_c, hidden=128, scale=film_scale)
+        self.film = FiLM(out_c, hidden=128, scale=film_scale, enabled=use_film)
         self.act = nn.ReLU(inplace=False)
 
     def forward(self, x, rf):

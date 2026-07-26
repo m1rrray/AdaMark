@@ -15,8 +15,8 @@ def get_adaptive_transforms(image_size=256):
 class CenterCropResize(nn.Module):
     """Center-crop by ``ratio`` then resize back to the original resolution
 
-    Used both as an evaluation crop attack and to crop the reference secret so
-    retrieval metrics stay aligned after the crop.
+    Applied to the container as a crop attack and to the reference secret, so
+    retrieval metrics stay spatially aligned.
     """
 
     def __init__(self, ratio=0.8, mode="bilinear"):
