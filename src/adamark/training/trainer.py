@@ -16,7 +16,7 @@ from adamark.attacks.attack_module import AttackModule
 from adamark.attacks.distortion import distortion_deterministic_oneof
 from adamark.data.dataset import ImageDataset
 from adamark.data.transforms import get_adaptive_transforms
-from adamark.losses import HidingLoss, RevealingLoss, FFTLoss, enforce_watermark_budget
+from adamark.losses import FFTLoss, HidingLoss, RevealingLoss, enforce_watermark_budget
 from adamark.models import HidingNet, RevealingNet
 from adamark.training.checkpoint import save_checkpoint
 from adamark.utils import ddp_mean, generate_qr_payloads, set_seed

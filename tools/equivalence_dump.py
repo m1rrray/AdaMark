@@ -61,8 +61,7 @@ def build_dump(src_path):
 
     from adamark.attacks import AttackModule, Distortion, JpegDistortion, Tampering
     from adamark.attacks.distortion import distortion_deterministic_oneof
-    from adamark.losses import (FFTLoss, HidingLoss, RevealingLoss,
-                                enforce_watermark_budget)
+    from adamark.losses import FFTLoss, HidingLoss, RevealingLoss, enforce_watermark_budget
     from adamark.models import HidingNet, RevealingNet
     from adamark.utils import generate_qr_payloads
 

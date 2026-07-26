@@ -1,3 +1,3 @@
-from .losses import HidingLoss, RevealingLoss, FFTLoss, enforce_watermark_budget
+from .losses import FFTLoss, HidingLoss, RevealingLoss, enforce_watermark_budget
 
 __all__ = ["HidingLoss", "RevealingLoss", "FFTLoss", "enforce_watermark_budget"]

@@ -6,7 +6,7 @@ Layer attribute names are part of the checkpoint format and must not be renamed.
 import torch
 import torch.nn as nn
 
-from .modulation import FiLM, ConvDownBlock, ConvUpBlock
+from .modulation import ConvDownBlock, ConvUpBlock, FiLM
 
 
 class HidingNet(nn.Module):

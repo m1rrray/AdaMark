@@ -20,7 +20,7 @@ def main():
 
     set_seed(42)
 
-    with open(args.config, "r") as f:
+    with open(args.config) as f:
         config = yaml.safe_load(f)
 
     run_evaluation(config)

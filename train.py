@@ -20,7 +20,7 @@ def main():
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s")
 
-    with open(args.config, "r") as f:
+    with open(args.config) as f:
         config = yaml.safe_load(f)
 
     train(config)

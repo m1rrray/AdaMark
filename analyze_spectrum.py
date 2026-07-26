@@ -16,9 +16,13 @@ from tqdm import tqdm
 
 from adamark.data.dataset import create_tamper_dataset
 from adamark.data.transforms import get_adaptive_transforms
-from adamark.evaluation.spectral import (band_labels, plot_spectral_distribution,
-                                         radial_band_energy, save_spectral_table,
-                                         spectral_table)
+from adamark.evaluation.spectral import (
+    band_labels,
+    plot_spectral_distribution,
+    radial_band_energy,
+    save_spectral_table,
+    spectral_table,
+)
 from adamark.losses import enforce_watermark_budget
 from adamark.models import HidingNet
 from adamark.utils import generate_qr_payloads, set_seed
@@ -52,7 +56,7 @@ def main():
 
     set_seed(42)
 
-    with open(args.config, "r") as f:
+    with open(args.config) as f:
         config = yaml.safe_load(f)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
