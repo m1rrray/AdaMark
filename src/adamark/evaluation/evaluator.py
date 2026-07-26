@@ -1,4 +1,4 @@
-"""Single-pass evaluation: imperceptibility, retrieval robustness, tamper localization."""
+"""Single-pass evaluation of imperceptibility, retrieval robustness and tamper localization"""
 
 import piq
 import torch
@@ -21,11 +21,13 @@ def calculate_psnr(img1, img2):
 
 def evaluate_model_single_pass(hiding_net, revealing_net, loader, device, attacks_dict,
                                rf_value, verbose=True, tamper_threshold=0.5):
-    """Evaluate the adaptive model at a fixed rf across the attack suite.
+    """Evaluate the adaptive model at a fixed rf across the attack suite
 
-    For each attack the function measures retrieval quality (PSNR/SSIM of the
-    recovered secret) and tamper localization (pixel AUROC/AP/F1 of the mismatch map).
+    For each attack the function measures retrieval quality, as PSNR and SSIM of the
+    recovered secret, and tamper localization, as pixel AUROC, AP and F1 of the
+    mismatch map.
     """
+
     hiding_net.eval()
     revealing_net.eval()
 
@@ -36,7 +38,7 @@ def evaluate_model_single_pass(hiding_net, revealing_net, loader, device, attack
 
     metrics = {
         "imperceptibility": {"psnr": 0.0, "ssim": 0.0, "count": 0},
-        "retrieval": {atk: {"l1": 0.0, "psnr": 0.0, "ssim": 0.0, "ber": 0.0, "count": 0}
+        "retrieval": {atk: {"psnr": 0.0, "ssim": 0.0, "count": 0}
                       for atk in attacks_dict},
         "tamper": {atk: {"auroc": None, "ap": None, "TP": 0, "FP": 0, "TN": 0, "FN": 0}
                    for atk in attacks_dict},
@@ -59,9 +61,9 @@ def evaluate_model_single_pass(hiding_net, revealing_net, loader, device, attack
                 cover_img = cover_img.to(device)
                 using_real_masks = False
 
-            B, C, H, W = cover_img.shape
+            B, _, H, W = cover_img.shape
 
-            with torch.autocast(device_type="cuda"):
+            with torch.autocast(device_type=device.type):
                 secret_img = generate_qr_payloads(B, H, W, block_size=8, device=device)
                 rf_tensor = torch.full((B, 1), rf_value, device=device)
                 watermark = hiding_net(secret_img, rf_tensor)

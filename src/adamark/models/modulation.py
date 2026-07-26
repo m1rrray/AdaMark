@@ -1,4 +1,4 @@
-"""rf-conditioned modulation blocks (FiLM) shared by the hiding network.
+"""rf-conditioned modulation blocks shared by the hiding network
 
 The robustness factor ``rf`` controls the imperceptibility/robustness trade-off.
 It is injected into the convolutional blocks through FiLM modulation, whose
@@ -10,7 +10,7 @@ import torch.nn as nn
 
 
 class SinusoidalEmbedding(nn.Module):
-    """Maps a scalar rf in [0, 1] to a sinusoidal feature vector."""
+    """Maps a scalar rf in [0, 1] to a sinusoidal feature vector"""
 
     def __init__(self, num_freqs: int = 8):
         super().__init__()
@@ -23,9 +23,9 @@ class SinusoidalEmbedding(nn.Module):
 
 
 class FiLM(nn.Module):
-    """Feature-wise linear modulation conditioned on rf."""
+    """Feature-wise linear modulation conditioned on rf"""
 
-    def __init__(self, num_channels: int, rf_dim: int = 1, hidden: int = 128,
+    def __init__(self, num_channels: int, hidden: int = 128,
                  scale: float = 1.0, num_freqs: int = 8):
         super().__init__()
         self.scale = float(scale)
@@ -55,13 +55,13 @@ class FiLM(nn.Module):
 
 
 class ConvDownBlock(nn.Module):
-    """Strided conv + InstanceNorm + FiLM(rf) + LeakyReLU (encoder block)."""
+    """Encoder block: strided conv, InstanceNorm, rf-conditioned FiLM and LeakyReLU"""
 
-    def __init__(self, in_c, out_c, rf_dim=1, film_scale=1.0):
+    def __init__(self, in_c, out_c, film_scale=1.0):
         super().__init__()
         self.conv = nn.Conv2d(in_c, out_c, kernel_size=4, stride=2, padding=1)
         self.norm = nn.InstanceNorm2d(out_c, affine=False)
-        self.film = FiLM(out_c, rf_dim=rf_dim, hidden=128, scale=film_scale)
+        self.film = FiLM(out_c, hidden=128, scale=film_scale)
         self.act = nn.LeakyReLU(0.1, inplace=False)
 
     def forward(self, x, rf):
@@ -73,13 +73,13 @@ class ConvDownBlock(nn.Module):
 
 
 class ConvUpBlock(nn.Module):
-    """Transposed conv + InstanceNorm + FiLM(rf) + ReLU (decoder block)."""
+    """Decoder block: transposed conv, InstanceNorm, rf-conditioned FiLM and ReLU"""
 
-    def __init__(self, in_c, out_c, rf_dim=1, film_scale=1.0):
+    def __init__(self, in_c, out_c, film_scale=1.0):
         super().__init__()
         self.conv = nn.ConvTranspose2d(in_c, out_c, kernel_size=4, stride=2, padding=1)
         self.norm = nn.InstanceNorm2d(out_c, affine=False)
-        self.film = FiLM(out_c, rf_dim=rf_dim, hidden=128, scale=film_scale)
+        self.film = FiLM(out_c, hidden=128, scale=film_scale)
         self.act = nn.ReLU(inplace=False)
 
     def forward(self, x, rf):

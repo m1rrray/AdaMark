@@ -1,4 +1,4 @@
-"""Entry point for distributed training.
+"""Entry point for distributed training
 
 Usage:
     torchrun --nproc_per_node=<N> train.py --config configs/train_config.yaml
@@ -15,7 +15,7 @@ from adamark.training import train
 def main():
     parser = argparse.ArgumentParser(description="Train the adaptive watermarking model.")
     parser.add_argument("--config", default="./configs/train_config.yaml",
-                        help="Path to the training config YAML.")
+                        help="Path to the training config YAML")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s")

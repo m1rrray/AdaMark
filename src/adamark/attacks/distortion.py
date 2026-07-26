@@ -1,4 +1,4 @@
-"""Differentiable distortions (JPEG/blur) used during training and evaluation."""
+"""Differentiable JPEG and blur distortions used during training and evaluation"""
 
 import random
 
@@ -10,11 +10,11 @@ import torchvision.io as tv_io
 
 
 class Distortion(nn.Module):
-    """rf-scaled stochastic distortion (JPEG or blur) applied during training.
+    """rf-scaled stochastic JPEG or blur distortion applied during training
 
     Severity is drawn proportionally to rf, so high-rf samples are trained against
-    stronger degradations. JPEG uses the straight-through trick: forward pass uses a
-    real (non-differentiable) codec, gradients flow through the differentiable approx.
+    stronger degradations. JPEG uses the straight-through trick: the forward pass uses
+    a real non-differentiable codec, gradients flow through the differentiable approx.
     """
 
     def __init__(self, jpeg_quality=15.0, max_blur_sigma=1.75):
@@ -24,7 +24,7 @@ class Distortion(nn.Module):
 
     def forward(self, x, rf, force_max=False):
         x = x.clamp(0, 1)
-        B, C, H, W = x.shape
+        B, _, H, W = x.shape
 
         rf_vec = rf.view(-1) if rf.dim() > 0 else rf.expand(B)
         rf_vec = rf_vec.to(device=x.device).clamp(0, 1)
@@ -58,13 +58,12 @@ class Distortion(nn.Module):
             else:
                 x_rescaled[i:i + 1] = x[i:i + 1]
 
-        x_input = x_rescaled
         quality_vec = 100.0 - sev * (100.0 - self.min_jpeg_quality)
 
-        x_diff = kornia.enhance.jpeg_codec_differentiable(x_input, quality_vec)
+        x_diff = kornia.enhance.jpeg_codec_differentiable(x_rescaled, quality_vec)
 
         with torch.no_grad():
-            x_uint8 = (x_input.clamp(0, 1) * 255.0).to(torch.uint8).cpu()
+            x_uint8 = (x_rescaled.clamp(0, 1) * 255.0).to(torch.uint8).cpu()
             res = []
             for i in range(B):
                 q = int(quality_vec[i].item())
@@ -83,8 +82,9 @@ class Distortion(nn.Module):
 def distortion_deterministic_oneof(x, rf_attack: float, mode: str,
                                    min_jpeg_quality=50.0, max_blur_sigma=2.0,
                                    blur_kernel=(7, 7)):
-    """Deterministic single-mode distortion used in the validation loop."""
-    B, C, H, W = x.shape
+    """Deterministic single-mode distortion used in the validation loop"""
+
+    B = x.shape[0]
     device = x.device
     rf = float(rf_attack)
 
@@ -108,16 +108,15 @@ def distortion_deterministic_oneof(x, rf_attack: float, mode: str,
 
 
 class JpegDistortion(nn.Module):
-    """Real (non-differentiable) JPEG round-trip with optional pre-blur, for evaluation.
+    """Real non-differentiable JPEG round-trip with optional pre-blur, for evaluation
 
-    Quality >= 100 and sigma <= 0 is a no-op pass-through.
+    Quality >= 100 combined with sigma <= 0 is a no-op pass-through.
     """
 
     def __init__(self, jpeg_quality=100.0, blur_sigma=0.0, blur_kernel_size=7):
         super().__init__()
         self.jpeg_quality = int(jpeg_quality)
         self.blur_sigma = float(blur_sigma)
-        self.blur_kernel_size = blur_kernel_size
 
         self.gaussian_blur = None
         if self.blur_sigma and self.blur_sigma > 0:
@@ -126,7 +125,7 @@ class JpegDistortion(nn.Module):
                 (self.blur_sigma, self.blur_sigma),
             )
 
-    def forward(self, image_batch, rf=None):
+    def forward(self, image_batch):
         B = image_batch.size(0)
         device = image_batch.device
 

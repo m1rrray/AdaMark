@@ -1,4 +1,4 @@
-"""Entry point for evaluation.
+"""Entry point for evaluation
 
 Usage:
     python evaluate.py --config configs/eval_config.yaml
@@ -15,7 +15,7 @@ from adamark.utils import set_seed
 def main():
     parser = argparse.ArgumentParser(description="Evaluate the adaptive watermarking model.")
     parser.add_argument("--config", default="./configs/eval_config.yaml",
-                        help="Path to the evaluation config YAML.")
+                        help="Path to the evaluation config YAML")
     args = parser.parse_args()
 
     set_seed(42)

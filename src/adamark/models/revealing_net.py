@@ -1,4 +1,4 @@
-"""RevealingNet: extracts the watermark/secret from a (possibly attacked) container.
+"""RevealingNet: extracts the watermark/secret from a possibly attacked container
 
 Layer attribute names are part of the checkpoint format and must not be renamed.
 """
@@ -8,7 +8,7 @@ import torch.nn as nn
 
 class ResidualBlock(nn.Module):
     def __init__(self, channels, dilation):
-        super(ResidualBlock, self).__init__()
+        super().__init__()
         self.conv1 = nn.Conv2d(channels, channels, kernel_size=3,
                                padding=dilation, dilation=dilation)
         self.norm1 = nn.InstanceNorm2d(channels, affine=True)
@@ -25,7 +25,7 @@ class ResidualBlock(nn.Module):
 
 class RevealingNet(nn.Module):
     def __init__(self, in_channels=3, out_channels=3):
-        super(RevealingNet, self).__init__()
+        super().__init__()
 
         self.down_sample = nn.Sequential(
             nn.Conv2d(in_channels, 128, kernel_size=3, stride=1, padding=1),

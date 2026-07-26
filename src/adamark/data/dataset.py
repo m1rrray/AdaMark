@@ -1,16 +1,16 @@
-"""Datasets: FFHQ covers for training, and tamper-localization datasets for eval."""
+"""Datasets: FFHQ covers for training and tamper-localization datasets for evaluation"""
 
 import glob
 import os
 import random
 
-import torchvision.transforms.functional as F
 from PIL import Image
 from torch.utils.data import Dataset
 
 
-def create_tamper_dataset(dataset_name, base_dir, transform=None, limit=None, tamper_filter=None):
-    """Factory for the supported tamper-localization datasets."""
+def create_tamper_dataset(dataset_name, base_dir, transform, limit=None, tamper_filter=None):
+    """Factory for the supported tamper-localization datasets"""
+
     dataset_name = dataset_name.lower()
 
     if dataset_name == "casia1":
@@ -46,21 +46,17 @@ def create_tamper_dataset(dataset_name, base_dir, transform=None, limit=None, ta
 
 
 class ImageDataset(Dataset):
-    """Cover-image dataset (FFHQ). Returns (cover_tensor, None)."""
+    """FFHQ cover-image dataset, yields a cover tensor and None
 
-    def __init__(self, cover_dir, transform=None, max_samples=None, seed=42):
+    ``transform`` is required: it must resize to the model resolution and convert
+    to a [0, 1] tensor.
+    """
+
+    def __init__(self, cover_dir, transform):
         self.cover_dir = cover_dir
         self.transform = transform
 
-        all_cover_files = sorted(os.listdir(cover_dir))
-
-        if seed is not None:
-            random.seed(seed)
-
-        if max_samples is not None and len(all_cover_files) > max_samples:
-            self.cover_files = random.sample(all_cover_files, max_samples)
-        else:
-            self.cover_files = all_cover_files
+        self.cover_files = sorted(os.listdir(cover_dir))
 
     def __len__(self):
         return len(self.cover_files)
@@ -69,20 +65,13 @@ class ImageDataset(Dataset):
         cover_path = os.path.join(self.cover_dir, self.cover_files[idx])
         cover_image = Image.open(cover_path).convert("RGB")
 
-        if self.transform:
-            cover_tensor = self.transform(cover_image)
-        else:
-            cover_tensor = F.to_tensor(cover_image)
-
-        return cover_tensor, None
+        return self.transform(cover_image), None
 
 
 class Casia2Dataset(Dataset):
-    """CASIA2 tamper-localization dataset."""
+    """CASIA2 tamper-localization dataset"""
 
-    def __init__(self, au_dir, tp_dir, gt_dir, transform=None, limit=None, tamper_filter=None):
-        self.au_dir = au_dir
-        self.tp_dir = tp_dir
+    def __init__(self, au_dir, tp_dir, gt_dir, transform, limit=None, tamper_filter=None):
         self.gt_dir = gt_dir
         self.transform = transform
 
@@ -118,7 +107,6 @@ class Casia2Dataset(Dataset):
         parts = name.split("_")
         return {
             "type": "splicing" if parts[1] == "D" else "copymove",
-            "source_id": parts[6] if len(parts) > 6 else None,
             "target_id": parts[5] if len(parts) > 7 else None,
             "full_name": name,
         }
@@ -141,20 +129,17 @@ class Casia2Dataset(Dataset):
         else:
             mask_img = Image.new("L", tp_img.size, 0)
 
-        if self.transform:
-            au_img = self.transform(au_img)
-            tp_img = self.transform(tp_img)
-            mask_tensor = self.transform(mask_img)
-            mask_tensor = (mask_tensor > 0.5).float()
+        au_img = self.transform(au_img)
+        tp_img = self.transform(tp_img)
+        mask_tensor = (self.transform(mask_img) > 0.5).float()
 
         return au_img, tp_img, mask_tensor
 
 
 class Casia1Dataset(Dataset):
-    """CASIA1 tamper-localization dataset."""
+    """CASIA1 tamper-localization dataset"""
 
-    def __init__(self, au_dir, modified_tp_dir, gt_dir, transform=None, limit=None, tamper_filter=None):
-        self.au_dir = au_dir
+    def __init__(self, au_dir, modified_tp_dir, gt_dir, transform, limit=None, tamper_filter=None):
         self.transform = transform
 
         self.gt_dict = {}
@@ -208,11 +193,9 @@ class Casia1Dataset(Dataset):
         au_img = Image.open(self.au_dict[info["target_id"]]).convert("RGB")
         mask_img = Image.open(self.gt_dict[info["full_name"]]).convert("L")
 
-        if self.transform:
-            au_img = self.transform(au_img)
-            tp_img = self.transform(tp_img)
-            mask_tensor = self.transform(mask_img)
-            mask_tensor = (mask_tensor > 0.5).float()
+        au_img = self.transform(au_img)
+        tp_img = self.transform(tp_img)
+        mask_tensor = (self.transform(mask_img) > 0.5).float()
 
         return au_img, tp_img, mask_tensor
 
@@ -221,12 +204,9 @@ class Casia1Dataset(Dataset):
 
 
 class ColumbiaDataset(Dataset):
-    """Columbia splicing dataset."""
+    """Columbia splicing dataset"""
 
-    def __init__(self, auth_dir, splice_dir, gt_dir, transform=None, limit=None):
-        self.auth_dir = auth_dir
-        self.splice_dir = splice_dir
-        self.gt_dir = gt_dir
+    def __init__(self, auth_dir, splice_dir, gt_dir, transform, limit=None):
         self.transform = transform
 
         self.auth_paths = sorted(glob.glob(os.path.join(auth_dir, "*.*")))
@@ -251,12 +231,10 @@ class ColumbiaDataset(Dataset):
         tampered_img = Image.open(splice_path).convert("RGB")
         mask_img = Image.open(gt_path).convert("RGB")
 
-        if self.transform:
-            cover_img = self.transform(cover_img)
-            tampered_img = self.transform(tampered_img)
-            mask_tensor = self.transform(mask_img)
+        cover_img = self.transform(cover_img)
+        tampered_img = self.transform(tampered_img)
 
-            mask_binary = (mask_tensor[1] > 0.5).float()
-            mask_tensor = mask_binary.unsqueeze(0)
+        # Columbia masks are colour-coded; the green channel carries the region.
+        mask_tensor = (self.transform(mask_img)[1] > 0.5).float().unsqueeze(0)
 
         return cover_img, tampered_img, mask_tensor

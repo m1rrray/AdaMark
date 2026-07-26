@@ -1,4 +1,4 @@
-"""Builds the evaluation attack suite (image transform, optional mask transform) by name."""
+"""Builds the evaluation attack suite by name, as image and optional mask transforms"""
 
 import kornia
 import torch
@@ -8,17 +8,18 @@ from adamark.data.transforms import CenterCropResize
 
 
 def build_eval_attacks(device):
-    """Return a dict {attack_name: (image_fn, mask_fn_or_None)} covering the suite.
+    """Return a dict mapping attack_name to a pair of image_fn and mask_fn or None
 
     Names follow the ``<category>_<param>`` convention parsed downstream by reporting.
     ``mask_fn`` is provided only for geometric attacks that also move the GT mask.
     """
+
     attacks_dict = {}
 
     jpeg_qualities = [100, 90, 80, 70, 60, 50, 40, 30, 20]
     for q in jpeg_qualities:
         dist = JpegDistortion(jpeg_quality=q).to(device)
-        attacks_dict[f"jpeg_{q}"] = (lambda x, d=dist: d(x, None), None)
+        attacks_dict[f"jpeg_{q}"] = (lambda x, d=dist: d(x), None)
 
     blur_sigmas = [0.5, 1.0, 1.5, 2.0]
     for s in blur_sigmas:

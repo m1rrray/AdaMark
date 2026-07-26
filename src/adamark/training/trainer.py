@@ -1,4 +1,4 @@
-"""Distributed (DDP) training loop for the adaptive watermarking model."""
+"""Distributed DDP training loop for the adaptive watermarking model"""
 
 import logging
 import os
@@ -7,7 +7,6 @@ import random
 import numpy as np
 import torch
 import torch.distributed as dist
-import torch.nn.functional as F
 from kornia.metrics import psnr, ssim
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, Subset
@@ -117,7 +116,6 @@ def train(config):
 
     scaler_h = torch.cuda.amp.GradScaler()
 
-    lambda_h = config.get("hiding_loss_weight", 1.0)
     lambda_r = config.get("revealing_loss_weight", 1.0)
     lambda_fft = config.get("lambda_fft", 0.5)
 
@@ -188,7 +186,6 @@ def train(config):
         train_sum = {
             "loss": 0.0, "loss_h": 0.0, "loss_r": 0.0, "loss_fft": 0.0,
             "psnr_h": 0.0, "ssim_h": 0.0, "psnr_r": 0.0, "ssim_r": 0.0,
-            "wh": 0.0, "wr": 0.0,
         }
         train_n = 0
 
@@ -198,7 +195,7 @@ def train(config):
             random_block_size = random.choice([8, 16])
             secret_images = generate_qr_payloads(B, H, W, block_size=random_block_size, device=device)
 
-            # Sample rf: spike at 0 (p0), spike at 1 (p1), uniform in between.
+            # Sample rf: spike at 0 with prob p0, spike at 1 with prob p1, else uniform.
             p0, p1 = 0.2, 0.2
             u = torch.rand((B,), device=device)
             rf_tensor = torch.empty((B,), device=device)
@@ -218,7 +215,7 @@ def train(config):
 
             with torch.cuda.amp.autocast():
                 watermark = hiding_net(secret_images, rf_tensor)
-                watermark = enforce_watermark_budget(watermark, rf_tensor, clip=None)
+                watermark = enforce_watermark_budget(watermark, rf_tensor)
 
                 container = (cover_images + watermark).clamp(0.0, 1.0)
                 effective_watermark = container - cover_images
@@ -227,10 +224,9 @@ def train(config):
                     container=container, cover=cover_images, rf=rf_tensor)
                 retrieved_secret = revealing_net(tampered_container)
 
-                loss_h_batch = hiding_criterion(
-                    container, cover_images, rf_tensor, lambda_h_base=lambda_h, ssim_func=ssim)
+                loss_h_batch = hiding_criterion(container, cover_images, ssim_func=ssim)
                 loss_r_batch = revealing_criterion(
-                    retrieved_secret, secret_images, mask, rf_tensor, lambda_r_base=lambda_r)
+                    retrieved_secret, secret_images, mask, lambda_r_base=lambda_r)
                 loss_fft = fft_loss_fn(effective_watermark, rf_tensor)
 
             total_loss_val = loss_h_batch + loss_r_batch + lambda_fft * loss_fft
@@ -283,13 +279,12 @@ def train(config):
                 with torch.cuda.amp.autocast():
                     rf_val = torch.ones((B, 1), device=device)
                     watermark = hiding_net(secret_img, rf_val)
-                    watermark = enforce_watermark_budget(watermark, rf_val, clip=None)
+                    watermark = enforce_watermark_budget(watermark, rf_val)
 
                     container = (cover_img + watermark).clamp(0.0, 1.0)
                     effective_watermark = container - cover_img
 
-                    loss_h = hiding_criterion(container, cover_img, rf_val,
-                                              lambda_h_base=lambda_h, ssim_func=ssim)
+                    loss_h = hiding_criterion(container, cover_img, ssim_func=ssim)
                     loss_fft = fft_loss_fn(effective_watermark, rf_val)
 
                     tamp_container, mask = val_tamper(container, cover_img)
@@ -302,7 +297,7 @@ def train(config):
 
                     # Clean branch.
                     retrieved_clean = revealing_net(tamp_container)
-                    loss_r_clean = revealing_criterion(retrieved_clean, secret_img, mask, rf_val,
+                    loss_r_clean = revealing_criterion(retrieved_clean, secret_img, mask,
                                                        lambda_r_base=lambda_r)
                     total_clean = loss_h + loss_r_clean
 
@@ -310,7 +305,7 @@ def train(config):
                     dist_jpeg = distortion_deterministic_oneof(
                         tamp_container, rf_attack=1.0, mode="jpeg", min_jpeg_quality=30.0)
                     retrieved_jpeg = revealing_net(dist_jpeg)
-                    loss_r_jpeg = revealing_criterion(retrieved_jpeg, secret_img, mask, rf_val,
+                    loss_r_jpeg = revealing_criterion(retrieved_jpeg, secret_img, mask,
                                                       lambda_r_base=lambda_r)
                     total_jpeg = loss_h + loss_r_jpeg
 
@@ -319,7 +314,7 @@ def train(config):
                         tamp_container, rf_attack=1.0, mode="blur", max_blur_sigma=1.5,
                         blur_kernel=(11, 11))
                     retrieved_blur = revealing_net(dist_blur)
-                    loss_r_blur = revealing_criterion(retrieved_blur, secret_img, mask, rf_val,
+                    loss_r_blur = revealing_criterion(retrieved_blur, secret_img, mask,
                                                       lambda_r_base=lambda_r)
                     total_blur = loss_h + loss_r_blur
 

@@ -1,4 +1,4 @@
-"""End-to-end evaluation: load models, build attacks, sweep rf, report metrics."""
+"""End-to-end evaluation: load models, build attacks, sweep rf and report metrics"""
 
 import os
 

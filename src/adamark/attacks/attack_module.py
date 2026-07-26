@@ -1,4 +1,4 @@
-"""Training-time attack pipeline combining tampering and distortion."""
+"""Training-time attack pipeline combining tampering and distortion"""
 
 import random
 
@@ -10,10 +10,10 @@ from .tampering import Tampering
 
 
 class AttackModule(nn.Module):
-    """Applies tampering and/or distortion to a watermarked container during training.
+    """Applies tampering and distortion to a watermarked container during training
 
     Returns the attacked image and the binary tamper mask used as the localization
-    target. A fraction of samples become "negatives" (reverted to cover, full mask).
+    target. A fraction of samples become negatives: reverted to cover, with a full mask.
     """
 
     def __init__(self, p_tamper=0.5, p_distort=0.8, p_hardcore=0.15, p_negative=0.15,
@@ -28,7 +28,7 @@ class AttackModule(nn.Module):
         self.distortion = Distortion(jpeg_quality=jpeg_quality, max_blur_sigma=max_blur_sigma)
 
     def forward(self, container, cover, rf):
-        B, C, H, W = container.shape
+        B, _, H, W = container.shape
         device = container.device
 
         img_out = container.clone()

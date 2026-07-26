@@ -5,10 +5,11 @@ import torch
 
 
 def set_seed(seed: int = 42):
-    """Seed Python, NumPy and PyTorch RNGs for reproducibility.
+    """Seed Python, NumPy and PyTorch RNGs for reproducibility
 
-    cudnn.benchmark stays on (we trade strict determinism for throughput).
+    cudnn.benchmark stays on: we trade strict determinism for throughput.
     """
+
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)

@@ -1,4 +1,4 @@
-"""HidingNet: rf-conditioned U-Net that produces an additive watermark.
+"""HidingNet: rf-conditioned U-Net that produces an additive watermark
 
 Layer attribute names are part of the checkpoint format and must not be renamed.
 """
@@ -10,26 +10,26 @@ from .modulation import FiLM, ConvDownBlock, ConvUpBlock
 
 
 class HidingNet(nn.Module):
-    def __init__(self, in_channels=3, out_channels=3, rf_dim=1, film_scale=1.0):
-        super(HidingNet, self).__init__()
+    def __init__(self, in_channels=3, out_channels=3, film_scale=1.0):
+        super().__init__()
 
-        self.enc1 = ConvDownBlock(in_channels, 32, rf_dim, film_scale)   # 256 -> 128
-        self.enc2 = ConvDownBlock(32, 64, rf_dim, film_scale)            # 128 -> 64
-        self.enc3 = ConvDownBlock(64, 128, rf_dim, film_scale)           # 64 -> 32
-        self.enc4 = ConvDownBlock(128, 256, rf_dim, film_scale)          # 32 -> 16
-        self.enc5 = ConvDownBlock(256, 512, rf_dim, film_scale)          # 16 -> 8
-        self.enc6 = ConvDownBlock(512, 1024, rf_dim, film_scale)         # 8 -> 4
-        self.enc7 = ConvDownBlock(1024, 1024, rf_dim, film_scale)        # 4 -> 2
+        self.enc1 = ConvDownBlock(in_channels, 32, film_scale)   # 256 -> 128
+        self.enc2 = ConvDownBlock(32, 64, film_scale)            # 128 -> 64
+        self.enc3 = ConvDownBlock(64, 128, film_scale)           # 64 -> 32
+        self.enc4 = ConvDownBlock(128, 256, film_scale)          # 32 -> 16
+        self.enc5 = ConvDownBlock(256, 512, film_scale)          # 16 -> 8
+        self.enc6 = ConvDownBlock(512, 1024, film_scale)         # 8 -> 4
+        self.enc7 = ConvDownBlock(1024, 1024, film_scale)        # 4 -> 2
 
-        self.dec6 = ConvUpBlock(1024, 1024, rf_dim, film_scale)      # 2 -> 4
-        self.dec5 = ConvUpBlock(2048, 512, rf_dim, film_scale)       # 4 -> 8   (1024 dec6 + 1024 enc6)
-        self.dec4 = ConvUpBlock(1024, 256, rf_dim, film_scale)       # 8 -> 16  (512 dec5 + 512 enc5)
-        self.dec3 = ConvUpBlock(512, 128, rf_dim, film_scale)        # 16 -> 32 (256 dec4 + 256 enc4)
-        self.dec2 = ConvUpBlock(256, 64, rf_dim, film_scale)         # 32 -> 64 (128 dec3 + 128 enc3)
-        self.dec1 = ConvUpBlock(128, 32, rf_dim, film_scale)         # 64 -> 128 (64 dec2 + 64 enc2)
+        self.dec6 = ConvUpBlock(1024, 1024, film_scale)      # 2 -> 4
+        self.dec5 = ConvUpBlock(2048, 512, film_scale)       # 4 -> 8, 1024 dec6 + 1024 enc6
+        self.dec4 = ConvUpBlock(1024, 256, film_scale)       # 8 -> 16, 512 dec5 + 512 enc5
+        self.dec3 = ConvUpBlock(512, 128, film_scale)        # 16 -> 32, 256 dec4 + 256 enc4
+        self.dec2 = ConvUpBlock(256, 64, film_scale)         # 32 -> 64, 128 dec3 + 128 enc3
+        self.dec1 = ConvUpBlock(128, 32, film_scale)         # 64 -> 128, 64 dec2 + 64 enc2
 
         self.final_conv = nn.ConvTranspose2d(64, out_channels, kernel_size=4, stride=2, padding=1)  # 128 -> 256
-        self.film_final = FiLM(out_channels, rf_dim=rf_dim, hidden=128, scale=film_scale)
+        self.film_final = FiLM(out_channels, hidden=128, scale=film_scale)
         self.final_act = nn.Tanh()
 
     def forward(self, secret_img, rf):

@@ -1,4 +1,4 @@
-"""Tampering operations: generate masks and splice/copy-move forged regions."""
+"""Tampering operations: generate masks and splice or copy-move forged regions"""
 
 import random
 
@@ -9,7 +9,7 @@ import torch.nn.functional as F
 
 
 class IrregularMask(nn.Module):
-    """Generates irregular tamper masks (brush strokes, noise blobs, or boxes)."""
+    """Generates irregular tamper masks from brush strokes, noise blobs or boxes"""
 
     def __init__(
         self,
@@ -104,14 +104,14 @@ class IrregularMask(nn.Module):
 
 
 class Tampering(nn.Module):
-    """Training-time tampering: irregular mask + copy-move or cross-paste."""
+    """Training-time tampering: irregular mask plus copy-move or cross-paste"""
 
     def __init__(self):
         super().__init__()
         self.mask_gen = IrregularMask(feather_sigma=(0.0, 0.0))
 
     def _copy_move(self, x, cover, mask):
-        B, C, H, W = x.shape
+        B, _, H, W = x.shape
         out = x.clone()
         for i in range(B):
             dx = random.randint(-W // 4, W // 4)
@@ -125,7 +125,7 @@ class Tampering(nn.Module):
         return x * (1 - mask) + src * mask
 
     def forward(self, x, cover):
-        B, C, H, W = x.shape
+        B, _, H, W = x.shape
         mask = self.mask_gen(B, H, W, x.device)
         mask = (mask > 0.5).float()
 
@@ -138,7 +138,7 @@ class Tampering(nn.Module):
 
 
 class BlockTampering(nn.Module):
-    """Evaluation-time tampering with rectangular blocks (no IrregularMask)."""
+    """Evaluation-time tampering with rectangular blocks, without IrregularMask"""
 
     def __init__(self, max_tamper_blocks=2, min_tamper_size=32, max_tamper_size=80):
         super().__init__()
@@ -159,7 +159,7 @@ class BlockTampering(nn.Module):
         return mask
 
     def forward(self, x):
-        B, C, H, W = x.shape
+        B, _, H, W = x.shape
         device = x.device
         mask = self._rand_mask(B, H, W, device)
 

@@ -1,27 +1,34 @@
-# ---- Конфигурация для обучения модели ----
+# ---- Training configuration ----
 
-# базовые гиперпараметры
+# base hyperparameters
 learning_rate: 0.00035
 batch_size: 64
 epochs: 150
 seed: 42
-num_workers: 12 
+num_workers: 12
 
-# при продолжении обучения позволяет поменять lr
+# cosine annealing schedule
+eta_min: 1.0e-7
+T_max: 150
+
+# when resuming, discard optimizer state so the learning rate can be changed
 warm_start: False
 
-# пути к данным
+# data paths
 train_cover_dir: "../datasets/ffhq/images256x256"
-save_dir: "./checkpoints_models_rf" 
+save_dir: "./checkpoints_models_rf"
 
-# параметры ранней остановки
+# train/validation split of the cover dataset
+val_ratio: 0.1
+split_seed: 42
+
+# early stopping
 patience: 15
 
-# веса для функции потерь
-hiding_loss_weight: 1
+# loss weights; lambda_h is fixed at 1.0 inside HidingLoss
 revealing_loss_weight: 3
 lambda_fft: 3
 
-# продолжение обучения с последней сохраненной модели
+# resume training from the last saved checkpoint
 resume: False
 resume_path: './checkpoints_models_rf/last.pth'

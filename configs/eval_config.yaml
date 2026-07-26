@@ -1,25 +1,25 @@
-# ---- Конфигурация для тестирования модели ----
+# ---- Evaluation configuration ----
 
-# базовые гиперпараметры
+# base hyperparameters
 batch_size: 16
 num_workers: 4
 
-# директории для тестовых датасетов
+# test dataset directories
 test_datasets:
   # casia1: "../datasets/CASIA1"
   # casia2: "../datasets/CASIA2_revised"
   # columbia: "../datasets/Columbia_final"
-  
-# для тестирования на части датасета
-limit: 
 
-# вывод подробной информации о процессе тестирования
+# evaluate on a subset of the dataset; leave empty to use all images
+limit:
+
+# print detailed progress during evaluation
 verbose: True
 
-# для тестирования только последней сохраненной модели, игнорируя пути к лучшим моделям
+# evaluate only the last saved checkpoint, ignoring the best-model paths below
 last: False
 last_path: './checkpoints_models_rf/last.pth'
 
-# пути к лучшим моделям для тестирования
+# paths to the best models to evaluate
 hiding_net_path: "./checkpoints_models_rf/hiding_net_best.pth"
 revealing_net_path: "./checkpoints_models_rf/revealing_net_best.pth"

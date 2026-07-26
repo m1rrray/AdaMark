@@ -4,7 +4,8 @@ from torchvision import transforms as T
 
 
 def get_adaptive_transforms(image_size=256):
-    """Resize to a square and convert to a [0, 1] tensor."""
+    """Resize to a square and convert to a [0, 1] tensor"""
+
     return T.Compose([
         T.Resize((image_size, image_size)),
         T.ToTensor(),
@@ -12,9 +13,9 @@ def get_adaptive_transforms(image_size=256):
 
 
 class CenterCropResize(nn.Module):
-    """Center-crop by ``ratio`` then resize back to the original resolution.
+    """Center-crop by ``ratio`` then resize back to the original resolution
 
-    Used both as a training/eval crop attack and to crop the reference secret so
+    Used both as an evaluation crop attack and to crop the reference secret so
     retrieval metrics stay aligned after the crop.
     """
 

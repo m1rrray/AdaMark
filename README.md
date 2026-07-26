@@ -20,6 +20,7 @@ src/adamark/
 ├── evaluation/    # evaluation, attack suite, reporting (Excel + plots)
 └── utils/         # seeding, DDP averaging, payload generation
 configs/           # train_config.yaml, eval_config.yaml
+tools/             # developer utilities (refactor equivalence checking)
 train.py           # CLI entry point for training
 evaluate.py        # CLI entry point for evaluation
 ```
