@@ -25,3 +25,18 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+line-length = 120
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "C4", "SIM", "UP", "PERF"]
+ignore = [
+    "D",
+    "ANN",
+    "PTH",
+    "NPY002",
+    "SIM102",
+    "SIM108",
+]
