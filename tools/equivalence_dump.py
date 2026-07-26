@@ -1,27 +1,18 @@
 """Dump and compare forward passes across two AdaMark revisions
 
-The cleanup refactor must be numerically inert. This script dumps every network
-output, loss scalar and attack output for a fixed seed, so two revisions can be
-compared bit-for-bit. It lives outside the package and selects the code under test
-via ``--src``, so the same script runs against both revisions.
+Dumps every network output, loss scalar and attack output for a fixed seed, so two
+revisions can be compared bit-for-bit. The code under test is selected with ``--src``,
+so one script runs against both checkouts.
 
-Signatures differ between revisions because the refactor drops unused parameters,
-so arguments are bound through ``inspect.signature`` rather than positionally.
-
-Because the dump uses each revision's default arguments, comparing a revision that
-added opt-in switches against one that did not also proves those switches are inert
-when left at their defaults.
+Arguments are bound through ``inspect.signature``, which keeps the dump valid when
+signatures differ between the two revisions.
 
 Usage:
-    git worktree add /tmp/adamark-base <baseline-commit>
+    git worktree add /tmp/adamark-base <commit>
     python tools/equivalence_dump.py --src /tmp/adamark-base/src --out /tmp/before.pt
     python tools/equivalence_dump.py --src ./src --out /tmp/after.pt
     python tools/equivalence_dump.py --compare /tmp/before.pt /tmp/after.pt
     python tools/equivalence_dump.py --src ./src --check-ablation
-
-Note: ``ImageDataset`` is deliberately excluded. The refactor removes its
-``random.seed(42)`` side effect on the global RNG, which is a known and intended
-difference; every stochastic op below is re-seeded explicitly so it stays isolated.
 """
 
 import argparse

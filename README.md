@@ -24,7 +24,7 @@ src/adamark/
 ├── evaluation/    # evaluation, attack suite, spectral analysis, reporting
 └── utils/         # seeding, DDP averaging, payload generation
 configs/            # train_config.yaml, eval_config.yaml
-tools/              # developer utilities, e.g. refactor equivalence checking
+tools/              # developer utilities, e.g. numerical equivalence checking
 train.py            # CLI entry point for training
 evaluate.py         # CLI entry point for evaluation
 analyze_spectrum.py # CLI entry point for the frequency analysis
